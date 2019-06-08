@@ -1,0 +1,93 @@
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+	"net/http"
+	"os"
+	"strings"
+
+	meta "cloud.google.com/go/compute/metadata"
+	"github.com/gin-gonic/gin"
+)
+
+const (
+	appName     = "kadvice"
+	notSetValue = "none"
+	defaultPort = "8080"
+)
+
+var (
+	logger  = log.New(os.Stdout, "[ka] ", 0)
+	project = mustEnvVar("PROJECT", notSetValue)
+	topic   = mustEnvVar("TOPIC", appName)
+	port    = mustEnvVar("PORT", defaultPort)
+	que     *queue
+)
+
+func main() {
+
+	// router
+	gin.SetMode(gin.ReleaseMode)
+	r := gin.New()
+
+	// config
+	parseProject()
+	configQueue(context.Background(), project, topic)
+
+	// root, post, health handlers
+	r.GET("/", simpleHandler)
+	r.GET("/health", simpleHandler)
+	r.POST("/:project/:cluster", webhookHandler)
+
+	// server
+	addr := fmt.Sprintf(":%s", port)
+	log.Printf("Server starting: %s \n", addr)
+	if err := r.Run(addr); err != nil {
+		log.Fatal(err)
+	}
+
+}
+
+func parseProject() {
+	if project != notSetValue {
+		return
+	}
+
+	mc := meta.NewClient(&http.Client{Transport: userAgentTransport{
+		userAgent: appName,
+		base:      http.DefaultTransport,
+	}})
+	p, err := mc.ProjectID()
+	if err != nil {
+		logger.Fatalf("Error creating metadata client: %v", err)
+	}
+	project = p
+}
+
+func mustEnvVar(key, fallbackValue string) string {
+	if val, ok := os.LookupEnv(key); ok {
+		logger.Printf("%s: %s", key, val)
+		return strings.TrimSpace(val)
+	}
+
+	if fallbackValue == "" {
+		logger.Fatalf("Required envvar not set: %s", key)
+	}
+
+	logger.Printf("%s: %s (not set, using default)", key, fallbackValue)
+	return fallbackValue
+}
+
+// GCP Metadata
+// https://godoc.org/cloud.google.com/go/compute/metadata#example-NewClient
+type userAgentTransport struct {
+	userAgent string
+	base      http.RoundTripper
+}
+
+func (t userAgentTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	req.Header.Set("User-Agent", t.userAgent)
+	return t.base.RoundTrip(req)
+}
