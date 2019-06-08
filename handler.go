@@ -38,7 +38,7 @@ func webhookHandler(c *gin.Context) {
 
 	// json
 	json := string(data)
-	//logger.Println(json)
+	logger.Println(json)
 
 	// jq
 	jq := gojsonq.New().JSONString(json)
@@ -56,6 +56,7 @@ func webhookHandler(c *gin.Context) {
 		EventTime: et,
 		Project:   c.Param("project"),
 		Cluster:   c.Param("cluster"),
+		// TODO: Uncomment before pushing to PubSub
 		// Content:   data,
 		Namespace: ns,
 		ID:        getStringValue(jq, "request.uid"),
