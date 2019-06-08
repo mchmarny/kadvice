@@ -1,0 +1,30 @@
+{
+    "kind": "AdmissionReview",
+    "apiVersion": "admission.k8s.io/v1beta1",
+    "request": {
+        "uid": "f097afac-8a33-11e9-97e7-42010a8e009b",
+        "kind": {
+            "group": "",
+            "version": "v1",
+            "kind": "Pod"
+        },
+        "resource": {
+            "group": "",
+            "version": "v1",
+            "resource": "pods"
+        },
+        "name": "cluster-local-gateway-5b57c887bc-6qj2p",
+        "namespace": "istio-system",
+        "operation": "DELETE",
+        "userInfo": {
+            "username": "system:node:gke-cr-default-pool-4ce66377-lnfw",
+            "groups": [
+                "system:nodes",
+                "system:authenticated"
+            ]
+        },
+        "object": null,
+        "oldObject": null,
+        "dryRun": false
+    }
+}

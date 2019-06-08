@@ -28,25 +28,31 @@ var (
 
 func main() {
 
-	// router
-	gin.SetMode(gin.ReleaseMode)
-	r := gin.New()
-
 	// config
 	parseProject()
 	configQueue(context.Background(), project, topic)
 
+	// server
+	addr := fmt.Sprintf(":%s", port)
+	log.Printf("Server starting: %s \n", addr)
+	if err := setupRouter().Run(addr); err != nil {
+		log.Fatal(err)
+	}
+
+}
+
+func setupRouter() *gin.Engine {
+
+	// router
+	gin.SetMode(gin.ReleaseMode)
+
 	// root, post, health handlers
+	r := gin.New()
 	r.GET("/", simpleHandler)
 	r.GET("/health", simpleHandler)
 	r.POST("/:project/:cluster", webhookHandler)
 
-	// server
-	addr := fmt.Sprintf(":%s", port)
-	log.Printf("Server starting: %s \n", addr)
-	if err := r.Run(addr); err != nil {
-		log.Fatal(err)
-	}
+	return r
 
 }
 
