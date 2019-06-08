@@ -2,7 +2,7 @@
     "kind": "AdmissionReview",
     "apiVersion": "admission.k8s.io/v1beta1",
     "request": {
-        "uid": "f097afac-8a33-11e9-97e7-42010a8e009b",
+        "uid": "bc728ae4-8a38-11e9-97e7-42010a8e009b",
         "kind": {
             "group": "",
             "version": "v1",
@@ -13,8 +13,8 @@
             "version": "v1",
             "resource": "pods"
         },
-        "name": "cluster-local-gateway-5b57c887bc-6qj2p",
-        "namespace": "istio-system",
+        "name": "klogo-gbs6x-deployment-7b7975fd4c-l7sqb",
+        "namespace": "demo",
         "operation": "DELETE",
         "userInfo": {
             "username": "system:node:gke-cr-default-pool-4ce66377-lnfw",

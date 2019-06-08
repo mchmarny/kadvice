@@ -1,0 +1,319 @@
+{
+    "kind": "AdmissionReview",
+    "apiVersion": "admission.k8s.io/v1beta1",
+    "request": {
+        "uid": "891839a3-8a38-11e9-accf-42010a8e004e",
+        "kind": {
+            "group": "",
+            "version": "v1",
+            "kind": "Pod"
+        },
+        "resource": {
+            "group": "",
+            "version": "v1",
+            "resource": "pods"
+        },
+        "namespace": "istio-system",
+        "operation": "CREATE",
+        "userInfo": {
+            "username": "system:serviceaccount:kube-system:replicaset-controller",
+            "uid": "05a72993-896a-11e9-accf-42010a8e004e",
+            "groups": [
+                "system:serviceaccounts",
+                "system:serviceaccounts:kube-system",
+                "system:authenticated"
+            ]
+        },
+        "object": {
+            "kind": "Pod",
+            "apiVersion": "v1",
+            "metadata": {
+                "name": "cluster-local-gateway-5b57c887bc-2qdp5",
+                "generateName": "cluster-local-gateway-5b57c887bc-",
+                "namespace": "istio-system",
+                "uid": "89182eb2-8a38-11e9-accf-42010a8e004e",
+                "creationTimestamp": "2019-06-08T21:58:23Z",
+                "labels": {
+                    "app": "cluster-local-gateway",
+                    "istio": "cluster-local-gateway",
+                    "pod-template-hash": "5b57c887bc"
+                },
+                "annotations": {
+                    "scheduler.alpha.kubernetes.io/critical-pod": "",
+                    "sidecar.istio.io/inject": "false"
+                },
+                "ownerReferences": [
+                    {
+                        "apiVersion": "apps/v1",
+                        "kind": "ReplicaSet",
+                        "name": "cluster-local-gateway-5b57c887bc",
+                        "uid": "2ecd579d-896a-11e9-accf-42010a8e004e",
+                        "controller": true,
+                        "blockOwnerDeletion": true
+                    }
+                ]
+            },
+            "spec": {
+                "volumes": [
+                    {
+                        "name": "istio-certs",
+                        "secret": {
+                            "secretName": "istio.cluster-local-gateway-service-account",
+                            "defaultMode": 420,
+                            "optional": true
+                        }
+                    },
+                    {
+                        "name": "clusterlocalgateway-certs",
+                        "secret": {
+                            "secretName": "istio-clusterlocalgateway-certs",
+                            "defaultMode": 420,
+                            "optional": true
+                        }
+                    },
+                    {
+                        "name": "clusterlocalgateway-ca-certs",
+                        "secret": {
+                            "secretName": "istio-clusterlocalgateway-ca-certs",
+                            "defaultMode": 420,
+                            "optional": true
+                        }
+                    },
+                    {
+                        "name": "cluster-local-gateway-service-account-token-2ctr5",
+                        "secret": {
+                            "secretName": "cluster-local-gateway-service-account-token-2ctr5"
+                        }
+                    }
+                ],
+                "containers": [
+                    {
+                        "name": "istio-proxy",
+                        "image": "docker.io/istio/proxyv2:1.0.7",
+                        "args": [
+                            "proxy",
+                            "router",
+                            "-v",
+                            "2",
+                            "--discoveryRefreshDelay",
+                            "1s",
+                            "--drainDuration",
+                            "45s",
+                            "--parentShutdownDuration",
+                            "1m0s",
+                            "--connectTimeout",
+                            "10s",
+                            "--serviceCluster",
+                            "cluster-local-gateway",
+                            "--zipkinAddress",
+                            "zipkin.istio-system:9411",
+                            "--proxyAdminPort",
+                            "15000",
+                            "--controlPlaneAuthPolicy",
+                            "NONE",
+                            "--discoveryAddress",
+                            "istio-pilot.istio-system:8080"
+                        ],
+                        "ports": [
+                            {
+                                "containerPort": 80,
+                                "protocol": "TCP"
+                            },
+                            {
+                                "containerPort": 443,
+                                "protocol": "TCP"
+                            },
+                            {
+                                "containerPort": 31400,
+                                "protocol": "TCP"
+                            },
+                            {
+                                "containerPort": 15011,
+                                "protocol": "TCP"
+                            },
+                            {
+                                "containerPort": 8060,
+                                "protocol": "TCP"
+                            },
+                            {
+                                "containerPort": 15030,
+                                "protocol": "TCP"
+                            },
+                            {
+                                "containerPort": 15031,
+                                "protocol": "TCP"
+                            },
+                            {
+                                "name": "http-envoy-prom",
+                                "containerPort": 15090,
+                                "protocol": "TCP"
+                            }
+                        ],
+                        "env": [
+                            {
+                                "name": "POD_NAME",
+                                "valueFrom": {
+                                    "fieldRef": {
+                                        "apiVersion": "v1",
+                                        "fieldPath": "metadata.name"
+                                    }
+                                }
+                            },
+                            {
+                                "name": "POD_NAMESPACE",
+                                "valueFrom": {
+                                    "fieldRef": {
+                                        "apiVersion": "v1",
+                                        "fieldPath": "metadata.namespace"
+                                    }
+                                }
+                            },
+                            {
+                                "name": "INSTANCE_IP",
+                                "valueFrom": {
+                                    "fieldRef": {
+                                        "apiVersion": "v1",
+                                        "fieldPath": "status.podIP"
+                                    }
+                                }
+                            },
+                            {
+                                "name": "ISTIO_META_POD_NAME",
+                                "valueFrom": {
+                                    "fieldRef": {
+                                        "apiVersion": "v1",
+                                        "fieldPath": "metadata.name"
+                                    }
+                                }
+                            }
+                        ],
+                        "resources": {
+                            "requests": {
+                                "cpu": "10m"
+                            }
+                        },
+                        "volumeMounts": [
+                            {
+                                "name": "istio-certs",
+                                "readOnly": true,
+                                "mountPath": "/etc/certs"
+                            },
+                            {
+                                "name": "clusterlocalgateway-certs",
+                                "readOnly": true,
+                                "mountPath": "/etc/istio/clusterlocalgateway-certs"
+                            },
+                            {
+                                "name": "clusterlocalgateway-ca-certs",
+                                "readOnly": true,
+                                "mountPath": "/etc/istio/clusterlocalgateway-ca-certs"
+                            },
+                            {
+                                "name": "cluster-local-gateway-service-account-token-2ctr5",
+                                "readOnly": true,
+                                "mountPath": "/var/run/secrets/kubernetes.io/serviceaccount"
+                            }
+                        ],
+                        "terminationMessagePath": "/dev/termination-log",
+                        "terminationMessagePolicy": "File",
+                        "imagePullPolicy": "IfNotPresent"
+                    }
+                ],
+                "restartPolicy": "Always",
+                "terminationGracePeriodSeconds": 30,
+                "dnsPolicy": "ClusterFirst",
+                "serviceAccountName": "cluster-local-gateway-service-account",
+                "serviceAccount": "cluster-local-gateway-service-account",
+                "securityContext": {},
+                "affinity": {
+                    "nodeAffinity": {
+                        "requiredDuringSchedulingIgnoredDuringExecution": {
+                            "nodeSelectorTerms": [
+                                {
+                                    "matchExpressions": [
+                                        {
+                                            "key": "beta.kubernetes.io/arch",
+                                            "operator": "In",
+                                            "values": [
+                                                "amd64",
+                                                "ppc64le",
+                                                "s390x"
+                                            ]
+                                        }
+                                    ]
+                                }
+                            ]
+                        },
+                        "preferredDuringSchedulingIgnoredDuringExecution": [
+                            {
+                                "weight": 2,
+                                "preference": {
+                                    "matchExpressions": [
+                                        {
+                                            "key": "beta.kubernetes.io/arch",
+                                            "operator": "In",
+                                            "values": [
+                                                "amd64"
+                                            ]
+                                        }
+                                    ]
+                                }
+                            },
+                            {
+                                "weight": 2,
+                                "preference": {
+                                    "matchExpressions": [
+                                        {
+                                            "key": "beta.kubernetes.io/arch",
+                                            "operator": "In",
+                                            "values": [
+                                                "ppc64le"
+                                            ]
+                                        }
+                                    ]
+                                }
+                            },
+                            {
+                                "weight": 2,
+                                "preference": {
+                                    "matchExpressions": [
+                                        {
+                                            "key": "beta.kubernetes.io/arch",
+                                            "operator": "In",
+                                            "values": [
+                                                "s390x"
+                                            ]
+                                        }
+                                    ]
+                                }
+                            }
+                        ]
+                    }
+                },
+                "schedulerName": "default-scheduler",
+                "tolerations": [
+                    {
+                        "key": "node.kubernetes.io/not-ready",
+                        "operator": "Exists",
+                        "effect": "NoExecute",
+                        "tolerationSeconds": 300
+                    },
+                    {
+                        "key": "node.kubernetes.io/unreachable",
+                        "operator": "Exists",
+                        "effect": "NoExecute",
+                        "tolerationSeconds": 300
+                    }
+                ],
+                "priority": 0,
+                "enableServiceLinks": true
+            },
+            "status": {
+                "phase": "Pending",
+                "qosClass": "Burstable"
+            }
+        },
+        "oldObject": null,
+        "dryRun": false
+    }
+}

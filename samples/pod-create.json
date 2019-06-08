@@ -2,7 +2,7 @@
     "kind": "AdmissionReview",
     "apiVersion": "admission.k8s.io/v1beta1",
     "request": {
-        "uid": "7ebb6f47-89fc-11e9-accf-42010a8e004e",
+        "uid": "3e4aea25-8a3a-11e9-accf-42010a8e004e",
         "kind": {
             "group": "",
             "version": "v1",
@@ -28,18 +28,18 @@
             "kind": "Pod",
             "apiVersion": "v1",
             "metadata": {
-                "name": "klogo-bm8qq-deployment-596f9ff689-xqfxc",
-                "generateName": "klogo-bm8qq-deployment-596f9ff689-",
+                "name": "klogo-7vp5k-deployment-679d6c664b-qhx6p",
+                "generateName": "klogo-7vp5k-deployment-679d6c664b-",
                 "namespace": "demo",
-                "uid": "7ebb6050-89fc-11e9-accf-42010a8e004e",
-                "creationTimestamp": "2019-06-08T14:48:36Z",
+                "uid": "3e4adcee-8a3a-11e9-accf-42010a8e004e",
+                "creationTimestamp": "2019-06-08T22:10:36Z",
                 "labels": {
-                    "app": "klogo-bm8qq",
-                    "pod-template-hash": "596f9ff689",
+                    "app": "klogo-7vp5k",
+                    "pod-template-hash": "679d6c664b",
                     "serving.knative.dev/configuration": "klogo",
                     "serving.knative.dev/configurationGeneration": "1",
-                    "serving.knative.dev/revision": "klogo-bm8qq",
-                    "serving.knative.dev/revisionUID": "7e976dc2-89fc-11e9-accf-42010a8e004e",
+                    "serving.knative.dev/revision": "klogo-7vp5k",
+                    "serving.knative.dev/revisionUID": "2c6ca6cc-8a39-11e9-accf-42010a8e004e",
                     "serving.knative.dev/service": "klogo"
                 },
                 "annotations": {
@@ -50,8 +50,8 @@
                     {
                         "apiVersion": "apps/v1",
                         "kind": "ReplicaSet",
-                        "name": "klogo-bm8qq-deployment-596f9ff689",
-                        "uid": "7eb56cd6-89fc-11e9-accf-42010a8e004e",
+                        "name": "klogo-7vp5k-deployment-679d6c664b",
+                        "uid": "2c8cb86a-8a39-11e9-accf-42010a8e004e",
                         "controller": true,
                         "blockOwnerDeletion": true
                     }
@@ -96,7 +96,7 @@
                             },
                             {
                                 "name": "K_REVISION",
-                                "value": "klogo-bm8qq"
+                                "value": "klogo-7vp5k"
                             },
                             {
                                 "name": "K_CONFIGURATION",
@@ -167,7 +167,7 @@
                             },
                             {
                                 "name": "SERVING_REVISION",
-                                "value": "klogo-bm8qq"
+                                "value": "klogo-7vp5k"
                             },
                             {
                                 "name": "QUEUE_SERVING_PORT",

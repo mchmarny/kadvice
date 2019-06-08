@@ -45,6 +45,7 @@ func webhookHandler(c *gin.Context) {
 
 	// skip if not a valid namespace
 	ns := getStringValue(jq, "request.namespace")
+	logger.Printf("NS: %s", ns)
 	if shouldExcludeNamespace(ns) {
 		logger.Printf("Skipping, NS filtered out: %s", ns)
 		return
@@ -67,8 +68,8 @@ func webhookHandler(c *gin.Context) {
 	// load metadata if exists
 	meta := jq.Reset().Find("request.object.metadata")
 	if meta != nil {
-		e.CreationTime = getTimeValue(jq, "creationTimestamp", et)
-		e.Pod = getStringValue(jq, "name")
+		e.Pod = getStringValue(jq, "request.object.metadata.name")
+		e.CreationTime = getTimeValue(jq, "request.object.metadata.creationTimestamp", et)
 	}
 
 	// parse labels if exist
@@ -122,15 +123,15 @@ func getBoolValue(j *gojsonq.JSONQ, q string) bool {
 const timeLayout = "2006-01-02T15:04:05Z"
 
 func getTimeValue(j *gojsonq.JSONQ, q string, d time.Time) time.Time {
-	t := getStringValue(j, q)
-	if t == "" {
+	r := j.Reset().Find(q)
+	if r == nil {
 		logger.Printf("Unable to find: %s", q)
 		return d
 	}
 
-	ts, err := time.Parse(timeLayout, t)
+	ts, err := time.Parse(timeLayout, r.(string))
 	if err != nil {
-		logger.Printf("Error parsing time from: %v", t)
+		logger.Printf("Error parsing time from: %v", r)
 		return d
 	}
 

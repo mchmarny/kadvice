@@ -11,11 +11,11 @@ meta:
 image: mod
 	gcloud builds submit \
 		--project cloudylabs-public \
-		--tag gcr.io/cloudylabs-public/kadvice:0.1.3
+		--tag gcr.io/cloudylabs-public/kadvice:0.1.4
 
 service:
 	gcloud beta run deploy kadvice \
-		--image=gcr.io/cloudylabs-public/kadvice:0.1.3 \
+		--image=gcr.io/cloudylabs-public/kadvice:0.1.4 \
 		--region=us-central1
 
 serviceless:

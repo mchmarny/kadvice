@@ -6,6 +6,8 @@ cloud.google.com/go/internal/optional
 cloud.google.com/go/internal/version
 cloud.google.com/go/pubsub/apiv1
 cloud.google.com/go/pubsub/internal/distribution
+# github.com/davecgh/go-spew v1.1.1
+github.com/davecgh/go-spew/spew
 # github.com/gin-contrib/sse v0.1.0
 github.com/gin-contrib/sse
 # github.com/gin-gonic/gin v1.4.0
@@ -33,6 +35,10 @@ github.com/mattn/go-isatty
 github.com/modern-go/concurrent
 # github.com/modern-go/reflect2 v1.0.1
 github.com/modern-go/reflect2
+# github.com/pmezard/go-difflib v1.0.0
+github.com/pmezard/go-difflib/difflib
+# github.com/stretchr/testify v1.3.0
+github.com/stretchr/testify/assert
 # github.com/ugorji/go v1.1.4
 github.com/ugorji/go/codec
 # go.opencensus.io v0.21.0
@@ -154,5 +160,7 @@ google.golang.org/grpc/credentials/alts/internal/authinfo
 google.golang.org/grpc/credentials/alts/internal/conn
 # gopkg.in/go-playground/validator.v8 v8.18.2
 gopkg.in/go-playground/validator.v8
+# gopkg.in/thedevsaddam/gojsonq.v2 v2.2.2
+gopkg.in/thedevsaddam/gojsonq.v2
 # gopkg.in/yaml.v2 v2.2.2
 gopkg.in/yaml.v2
