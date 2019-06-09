@@ -34,6 +34,9 @@ func webhookHandler(c *gin.Context) {
 		return
 	}
 
+	// print this all out for debugging new event types
+	logger.Println(string(data))
+
 	// REST params
 	project := c.Param("project")
 	cluster := c.Param("cluster")
@@ -83,6 +86,10 @@ func webhookHandler(c *gin.Context) {
 				ce.Revision = hr.Object.Meta.Labels.Revision
 			}
 		}
+	} else {
+		// capture the deletes name
+		ce.Name = hr.Name
+		ce.ObjectKind = hr.Kind.Kind
 	}
 
 	// printout event for debugging
@@ -132,8 +139,12 @@ type Webhook struct {
 	Request struct {
 		ID        string `json:"uid"`
 		Namespace string `json:"namespace"`
+		Name      string `json:"name"`
 		Operation string `json:"operation"`
-		Object    struct {
+		Kind      struct {
+			Kind string `json:"kind"`
+		} `json:"kind"`
+		Object struct {
 			Kind string `json:"kind"`
 			Meta struct {
 				Name       string    `json:"name"`

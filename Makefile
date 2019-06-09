@@ -1,12 +1,11 @@
+RELEASE=0.1.12
+PROJECT=$(gcloud config get-value project)
+
 .PHONY: clean
 
 mod:
 	go mod tidy
 	go mod vendor
-
-meta:
-	PROJECT=$(gcloud config get-value project)
-	PROJECT_NUM=$(gcloud projects list --filter="${PROJECT}" --format="value(PROJECT_NUMBER)")
 
 test:
 	go test ./... -v
@@ -14,25 +13,42 @@ test:
 image: mod
 	gcloud builds submit \
 		--project cloudylabs-public \
-		--tag gcr.io/cloudylabs-public/kadvice:0.1.7
+		--tag gcr.io/cloudylabs-public/kadvice:$(RELEASE)
 
 deploy:
 	gcloud beta run deploy kadvice \
-		--image=gcr.io/cloudylabs-public/kadvice:0.1.7 \
+		--image=gcr.io/cloudylabs-public/kadvice:$(RELEASE) \
 		--region=us-central1
 
 service: image
 	gcloud beta run deploy kadvice \
-		--image=gcr.io/cloudylabs-public/kadvice:0.1.7 \
+		--image=gcr.io/cloudylabs-public/kadvice:$(RELEASE) \
 		--region=us-central1
 
 serviceless:
-	gcloud beta run services delete preprocessd
+	gcloud beta run services delete kadvice
 
-sa:
-	gcloud iam service-accounts create preprocessdinvoker \
-    	--display-name "PreProcess Cloud Run Service Invoker"
+schema:
+	bq mk kadvice
+	bq query --use_legacy_sql=false "
+	CREATE OR REPLACE TABLE kadvice.raw_events (
+		event_id STRING NOT NULL,
+		project STRING NOT NULL,
+		cluster STRING NOT NULL,
+		event_time TIMESTAMP NOT NULL,
+		namespace STRING,
+		name STRING,
+		service STRING,
+		revision STRING,
+		configuration STRING,
+		operation STRING,
+		object_id STRING,
+		object_kind STRING,
+		object_creation_time TIMESTAMP,
+		content BYTES
+	)"
 
-	gcloud beta run services add-iam-policy-binding preprocessd \
-		--member=serviceAccount:preprocessdinvoker@cloudylabs.iam.gserviceaccount.com \
-		--role=roles/run.invoker
+job:
+	gcloud dataflow jobs run kadvice-topic-bq \
+    	--gcs-location gs://dataflow-templates/latest/PubSub_to_BigQuery \
+    	--parameters "inputTopic=projects/${PROJECT}/topics/kadvice,outputTableSpec=${PROJECT}:kadvice.raw_events"

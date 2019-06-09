@@ -14,9 +14,7 @@ webhooks:
         apiVersions:
           - v1
         operations:
-          - CREATE
-          - UPDATE
-          - DELETE
+          - "*"
         resources:
           - pods
     failurePolicy: Ignore
