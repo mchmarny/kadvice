@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"gopkg.in/thedevsaddam/gojsonq.v2"
 )
 
 var (
@@ -28,65 +27,71 @@ func webhookHandler(c *gin.Context) {
 	// always success response to the webhook
 	c.JSON(http.StatusOK, gin.H{"response": gin.H{"allowed": true}})
 
-	// post payload
-	body := c.Request.Body
-	data, err := ioutil.ReadAll(body)
+	// create a request body copy
+	data, err := ioutil.ReadAll(c.Request.Body)
 	if err != nil {
-		logger.Printf("Error getting post data: %v", err)
+		logger.Printf("Error getting request body: %v", err)
 		return
 	}
 
-	// json
-	json := string(data)
-	logger.Println(json)
+	// REST params
+	project := c.Param("project")
+	cluster := c.Param("cluster")
 
-	// jq
-	jq := gojsonq.New().JSONString(json)
-
-	// skip if not a valid namespace
-	ns := getStringValue(jq, "request.namespace")
-	logger.Printf("NS: %s", ns)
-	if shouldExcludeNamespace(ns) {
-		logger.Printf("Skipping, NS filtered out: %s", ns)
+	// bind payload
+	var hook Webhook
+	if err := json.Unmarshal(data, &hook); err != nil {
+		logger.Printf("Error decoding webhook: %v", err)
 		return
 	}
 
-	// create core event data
-	et := time.Now().UTC()
-	e := &Event{
-		EventTime: et,
-		Project:   c.Param("project"),
-		Cluster:   c.Param("cluster"),
-		// TODO: Uncomment before pushing to PubSub
-		// Content:   data,
-		Namespace: ns,
-		ID:        getStringValue(jq, "request.uid"),
-		Operation: getStringValue(jq, "request.operation"),
-		IsDryRun:  getBoolValue(jq, "request.dryRun"),
+	// check that it is not a dry run
+	if hook.Request.IsDryRun {
+		logger.Println("Webhook result of dry run")
+		return
 	}
 
-	// load metadata if exists
-	meta := jq.Reset().Find("request.object.metadata")
-	if meta != nil {
-		e.Pod = getStringValue(jq, "request.object.metadata.name")
-		e.CreationTime = getTimeValue(jq, "request.object.metadata.creationTimestamp", et)
+	// filter namespaces
+	logger.Printf("NS: %s", hook.Request.Namespace)
+	if shouldFilterNS(hook.Request.Namespace) {
+		logger.Printf("Skipping, NS filtered out: %s", hook.Request.Namespace)
+		return
 	}
 
-	// parse labels if exist
-	labels := jq.Reset().Find("request.object.metadata.labels")
-	if labels != nil {
-		m := labels.(map[string]interface{})
-		e.Service = asString(m["serving.knative.dev/service"])
-		e.Revision = asString(m["serving.knative.dev/revision"])
+	// create cluster event
+	hr := hook.Request
+	ce := &ClusterEvent{
+		EventID:   hr.ID,
+		Project:   project,
+		Cluster:   cluster,
+		Namespace: hr.Namespace,
+		Operation: hr.Operation,
+		EventTime: time.Now().UTC(),
+		Content:   data,
+	}
+
+	// load object details
+	if hr.Object.Kind != "" {
+		ce.ObjectKind = hr.Object.Kind
+		if hr.Object.Meta.Name != "" {
+			ce.Name = hr.Object.Meta.Name
+			ce.ObjectID = hr.Object.Meta.ID
+			ce.ObjectCreationTime = hr.Object.Meta.CreationOn
+			if hr.Object.Meta.Labels.Service != "" {
+				ce.Service = hr.Object.Meta.Labels.Service
+				ce.Configuration = hr.Object.Meta.Labels.Configuration
+				ce.Revision = hr.Object.Meta.Labels.Revision
+			}
+		}
 	}
 
 	// printout event for debugging
-	logger.Printf("Event: %+v", e)
+	logger.Printf("%+v", ce)
 
 	return
 }
 
-func shouldExcludeNamespace(ns string) bool {
+func shouldFilterNS(ns string) bool {
 	for _, n := range excludeNS {
 		if ns == n {
 			return true
@@ -95,66 +100,43 @@ func shouldExcludeNamespace(ns string) bool {
 	return false
 }
 
-func asString(v interface{}) string {
-	if v == nil {
-		return ""
-	}
-	return v.(string)
+// ClusterEvent represents the extracted event content
+type ClusterEvent struct {
+	EventID            string    `json:"event_id"`
+	Project            string    `json:"project"`
+	Cluster            string    `json:"cluster"`
+	EventTime          time.Time `json:"event_time"`
+	Namespace          string    `json:"namespace"`
+	Name               string    `json:"name"`
+	Service            string    `json:"service"`
+	Revision           string    `json:"revision"`
+	Configuration      string    `json:"configuration"`
+	Operation          string    `json:"operation"`
+	ObjectID           string    `json:"object_id"`
+	ObjectKind         string    `json:"object_kind"`
+	ObjectCreationTime time.Time `json:"object_creation_time"`
+	Content            []byte    `json:"content"`
 }
 
-func getStringValue(j *gojsonq.JSONQ, q string) string {
-	r := j.Reset().Find(q)
-	if r == nil {
-		logger.Printf("Unable to find: %s", q)
-		return ""
-	}
-	return r.(string)
-}
-
-func getBoolValue(j *gojsonq.JSONQ, q string) bool {
-	r := j.Reset().Find(q)
-	if r == nil {
-		logger.Printf("Unable to find: %s", q)
-		return false
-	}
-	return r.(bool)
-}
-
-const timeLayout = "2006-01-02T15:04:05Z"
-
-func getTimeValue(j *gojsonq.JSONQ, q string, d time.Time) time.Time {
-	r := j.Reset().Find(q)
-	if r == nil {
-		logger.Printf("Unable to find: %s", q)
-		return d
-	}
-
-	ts, err := time.Parse(timeLayout, r.(string))
-	if err != nil {
-		logger.Printf("Error parsing time from: %v", r)
-		return d
-	}
-
-	return ts
-}
-
-func writeResp(w http.ResponseWriter, status int, msg string) {
-	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(msg)
-}
-
-// Event represents the extracted event content
-type Event struct {
-	ID           string    `json:"event_id"`
-	Project      string    `json:"project"`
-	Cluster      string    `json:"cluster"`
-	Namespace    string    `json:"namespace"`
-	Pod          string    `json:"pod"`
-	Service      string    `json:"service"`
-	Revision     string    `json:"revision"`
-	Operation    string    `json:"operation"`
-	CreationTime time.Time `json:"creation_time"`
-	Content      []byte    `json:"content"`
-	EventTime    time.Time `json:"event_time"`
-	IsDryRun     bool      `json:"-,"`
+// Webhook represents posted data
+type Webhook struct {
+	Request struct {
+		ID        string `json:"uid"`
+		Namespace string `json:"namespace"`
+		Operation string `json:"operation"`
+		Object    struct {
+			Kind string `json:"kind"`
+			Meta struct {
+				Name       string    `json:"name"`
+				ID         string    `json:"uid"`
+				CreationOn time.Time `json:"creationTimestamp"`
+				Labels     struct {
+					Service       string `json:"serving.knative.dev/service"`
+					Configuration string `json:"serving.knative.dev/configuration"`
+					Revision      string `json:"serving.knative.dev/revision"`
+				} `json:"labels"`
+			} `json:"metadata"`
+		} `json:"object"`
+		IsDryRun bool `json:"dryRun"`
+	} `json:"request"`
 }

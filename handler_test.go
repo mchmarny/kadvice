@@ -21,7 +21,7 @@ func testHandler(t *testing.T, f *os.File) {
 func TestPodCreate(t *testing.T) {
 	file, err := os.Open("samples/pod-create.json")
 	if err != nil {
-		t.Fatal("Pod sample file not found")
+		t.Fatal("Sample file not found: pod-create.json")
 	}
 	testHandler(t, file)
 }
@@ -29,7 +29,15 @@ func TestPodCreate(t *testing.T) {
 func TestPodDelete(t *testing.T) {
 	file, err := os.Open("samples/pod-delete.json")
 	if err != nil {
-		t.Fatal("Pod sample file not found")
+		t.Fatal("Sample file not found: pod-delete.json")
+	}
+	testHandler(t, file)
+}
+
+func TestIstioPodCreate(t *testing.T) {
+	file, err := os.Open("samples/pod-istio-create.json")
+	if err != nil {
+		t.Fatal("Sample file not found: pod-istio-create.json")
 	}
 	testHandler(t, file)
 }
