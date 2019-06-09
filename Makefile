@@ -11,16 +11,16 @@ meta:
 image: mod
 	gcloud builds submit \
 		--project cloudylabs-public \
-		--tag gcr.io/cloudylabs-public/kadvice:0.1.5
+		--tag gcr.io/cloudylabs-public/kadvice:0.1.6
 
-service:
+deploy:
 	gcloud beta run deploy kadvice \
-		--image=gcr.io/cloudylabs-public/kadvice:0.1.5 \
+		--image=gcr.io/cloudylabs-public/kadvice:0.1.6 \
 		--region=us-central1
 
-service-update: image
+service: image
 	gcloud beta run deploy kadvice \
-		--image=gcr.io/cloudylabs-public/kadvice:0.1.5 \
+		--image=gcr.io/cloudylabs-public/kadvice:0.1.6 \
 		--region=us-central1
 
 serviceless:
@@ -33,8 +33,3 @@ sa:
 	gcloud beta run services add-iam-policy-binding preprocessd \
 		--member=serviceAccount:preprocessdinvoker@cloudylabs.iam.gserviceaccount.com \
 		--role=roles/run.invoker
-
-post:
-	curl -H "content-type: application/json" \
-		-d '{ "version": "v0.1.0", "type": "test", "color": "white", "click": 2 }' \
-		-X POST http://localhost:8080/myproject/mycluster

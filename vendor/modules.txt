@@ -160,7 +160,5 @@ google.golang.org/grpc/credentials/alts/internal/authinfo
 google.golang.org/grpc/credentials/alts/internal/conn
 # gopkg.in/go-playground/validator.v8 v8.18.2
 gopkg.in/go-playground/validator.v8
-# gopkg.in/thedevsaddam/gojsonq.v2 v2.2.2
-gopkg.in/thedevsaddam/gojsonq.v2
 # gopkg.in/yaml.v2 v2.2.2
 gopkg.in/yaml.v2
