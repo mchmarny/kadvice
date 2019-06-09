@@ -8,19 +8,22 @@ meta:
 	PROJECT=$(gcloud config get-value project)
 	PROJECT_NUM=$(gcloud projects list --filter="${PROJECT}" --format="value(PROJECT_NUMBER)")
 
+test:
+	go test ./... -v
+
 image: mod
 	gcloud builds submit \
 		--project cloudylabs-public \
-		--tag gcr.io/cloudylabs-public/kadvice:0.1.6
+		--tag gcr.io/cloudylabs-public/kadvice:0.1.7
 
 deploy:
 	gcloud beta run deploy kadvice \
-		--image=gcr.io/cloudylabs-public/kadvice:0.1.6 \
+		--image=gcr.io/cloudylabs-public/kadvice:0.1.7 \
 		--region=us-central1
 
 service: image
 	gcloud beta run deploy kadvice \
-		--image=gcr.io/cloudylabs-public/kadvice:0.1.6 \
+		--image=gcr.io/cloudylabs-public/kadvice:0.1.7 \
 		--region=us-central1
 
 serviceless:

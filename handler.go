@@ -88,6 +88,15 @@ func webhookHandler(c *gin.Context) {
 	// printout event for debugging
 	logger.Printf("%+v", ce)
 
+	// serialize the whole thing
+	ceBytes, err := json.Marshal(ce)
+	if err != nil {
+		logger.Printf("Error serializing parsed content: %v", err)
+		return
+	}
+
+	que.push(c.Request.Context(), ceBytes)
+
 	return
 }
 
