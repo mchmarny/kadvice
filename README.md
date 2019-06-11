@@ -92,7 +92,6 @@ PROJECT=$(gcloud config get-value project)
 gcloud dataflow jobs run kadvice-topic-bq \
   --gcs-location gs://dataflow-templates/latest/PubSub_to_BigQuery \
   --parameters "inputTopic=projects/${PROJECT}/topics/kadvice,outputTableSpec=${PROJECT}:kadvice.raw_events"
-
 ```
 
 Cloud Dataflow will take a couple of minutes to create the necessary resources. When done, you will see data in the `kadvice.raw_events` table in BigQuery.
