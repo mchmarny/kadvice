@@ -245,29 +245,32 @@ Now, let's evaluate the created model
 ```sql
 #standardSQL
 SELECT
-  *
-FROM
-  ML.EVALUATE(MODEL kadvice.metric_predict, (
-      SELECT
-        p.life_time as label,
-        p.service,
-        case
-          when p.life_time < 60 then 'short'
-          when p.life_time > 60 and p.life_time < 300 then 'medium'
-          else 'long'
-        end as life_duration,
-        m.reserved_ram,
-        case when m.reserved_ram = 0 then 0 else 1 end as has_reserved_ram,
-        case when m.used_ram > m.reserved_ram then 1 else 0 end as exceeded_reserved_ram,
-        m.used_cpu,
-        case when m.reserved_cpu = 0 then 0 else 1 end as has_reserved_cpu,
-        case when m.used_cpu > m.reserved_cpu then 1 else 0 end as exceeded_reserved_cpu,
-        FORMAT_TIMESTAMP("%F-%H-%M", p.creation_time) metric_minute
-      FROM kadvice.pods p
-      INNER JOIN kadvice.metrics m ON p.pod_name = m.pod
-        AND m.metric_time between p.creation_time AND p.deletion_time
-      ORDER BY metric_minute
+  service,
+  MIN(predicted_label-label) as runtime_sec_predict_low,
+  MAX(predicted_label-label) as runtime_sec_predict_high
+FROM ML.PREDICT(MODEL kadvice.metric_predict, (
+  SELECT
+    p.life_time as label,
+    p.service,
+    case
+      when p.life_time < 60 then 'short'
+      when p.life_time > 60 and p.life_time < 300 then 'medium'
+      else 'long'
+    end as life_duration,
+    m.reserved_ram,
+    case when m.reserved_ram = 0 then 0 else 1 end as has_reserved_ram,
+    case when m.used_ram > m.reserved_ram then 1 else 0 end as exceeded_reserved_ram,
+    m.used_cpu,
+    case when m.reserved_cpu = 0 then 0 else 1 end as has_reserved_cpu,
+    case when m.used_cpu > m.reserved_cpu then 1 else 0 end as exceeded_reserved_cpu,
+    FORMAT_TIMESTAMP("%F-%H-%M", p.creation_time) metric_minute
+  FROM kadvice.pods p
+  INNER JOIN kadvice.metrics m ON p.pod_name = m.pod
+    AND m.metric_time between p.creation_time AND p.deletion_time
 ))
+GROUP BY
+  service
+ORDER BY service
 ```
 
 The result of that model evaluation query is a single row
@@ -284,7 +287,7 @@ Finally, we can run a prediction query
 #standardSQL
 SELECT
   service,
-  SUM(predicted_label-label) as delta_seconds FROM ML.PREDICT(MODEL kadvice.metric_predict, (
+  ABS(predicted_label-label) as delta_seconds FROM ML.PREDICT(MODEL kadvice.metric_predict, (
 SELECT
     p.life_time as label,
     p.service,
