@@ -2,14 +2,19 @@
 
 Knative cluster events and metric streaming using Cloud Run, Cloud PubSub, Cloud Dataflow, and BigQuery ML. It comprises of two data flows:
 
-1. Kubernetes validating webhook that sends pod events to Cloud Run-based preprocessing service. That service extracts portent elements and publishes processed event data to a Cloud PubSub topic. Finally, a Cloud Dataflow job drains the data on the topic into a BigQuery table.
-2. Kubernetes-based application (POD) which polls GKE cluster API and extracts extracts runtime metrics (reserved and used CPU as well as reserved and used RAM) and then writes that data into BigQuery table
+## Events
+
+Kubernetes validating webhook that sends pod events to Cloud Run-based preprocessing service. That service extracts portent elements and publishes processed event data to a Cloud PubSub topic. Finally, a Cloud Dataflow job drains the data on the topic into a BigQuery table.
+
+## Metrics
+
+Kubernetes-based application (POD) which polls GKE cluster API and extracts extracts runtime metrics (reserved and used CPU as well as reserved and used RAM) and then writes that data into BigQuery table
 
 These two data sources combined with few SQL queries and BigQuery's ML model capabilities allow us to build potentially interesting recommendation services for Knative operation teams.
 
 ## Deployment
 
-### Knative Events (#1)
+### Knative Events
 
 The whole idea of using Knative service to monitor other Knative services brought up a few complications so to capture events from multiple Knative clusters we will use GCP Knative-compatible service called Cloud Run. The command to deploy a service into Cloud Run is basically the same to the one we would use to deploy into Cloud Run on GKE but without the `cluster` parameter.
 
@@ -92,7 +97,7 @@ gcloud dataflow jobs run kadvice-topic-bq \
 
 Cloud Dataflow will take a couple of minutes to create the necessary resources. When done, you will see data in the `kadvice.raw_events` table in BigQuery.
 
-### Knative Metrics (#2)
+### Knative Metrics
 
 Similarly, to export GKE pod metric to BigQuery we will use the [kexport](https://github.com/mchmarny/kexport) service. This is a single container so we can deploy it with a single command to all the clusters we want to track.
 
