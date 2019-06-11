@@ -238,7 +238,7 @@ OPTIONS(model_type='linear_reg') AS
   ORDER BY metric_minute
 ```
 
-> On large datasets you may want to build model on subset of data
+> On large data sets you may want to build model on subset of data
 
 Now, let's evaluate the created model
 
