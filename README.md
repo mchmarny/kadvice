@@ -1,33 +1,32 @@
 # kadvice
 
-Kubernetes events streaming using Cloud Run and BigQuery ML
+Knative cluster events and metric streaming using Cloud Run, Cloud PubSub, Cloud Dataflow, and BigQuery ML. It comprises of two data flows:
 
+1. Kubernetes validating webhook that sends pod events to Cloud Run-based preprocessing service. That service extracts portent elements and publishes processed event data to a Cloud PubSub topic. Finally, a Cloud Dataflow job drains the data on the topic into a BigQuery table.
+2. Kubernetes-based application (POD) which polls GKE cluster API and extracts extracts runtime metrics (reserved and used CPU as well as reserved and used RAM) and then writes that data into BigQuery table
 
+These two data sources combined with few SQL queries and BigQuery's ML model capabilities allow us to build potentially interesting recommendation services for Knative operation teams.
 
-# streams
+## Deployment
 
-IoT stream processing using Cloud Run, PubSub, BigQuery, and Dataflow
+### Knative Events (#1)
 
-BigQuery has recently added support for SQL queries over PubSub topic (Cloud Dataflow SQL, alpha). As a result it is now much easier to build stream analytics systems.
-
-## Config
-
-Define `$SERVICE_URL`
-
-```shell
-export SERVICE_URL="https://kadvice-2gtouos2pq-uc.a.run.app/PROJECT/CLUSTER"
-```
-
-Example
+The whole idea of using Knative service to monitor other Knative services brought up a few complications so to capture events from multiple Knative clusters we will use GCP Knative-compatible service called Cloud Run. The command to deploy a service into Cloud Run is basically the same to the one we would use to deploy into Cloud Run on GKE but without the `cluster` parameter.
 
 ```shell
-export SERVICE_URL="https://kadvice-2gtouos2pq-uc.a.run.app/cloudylabs/cr"
+gcloud beta run deploy kadvice \
+		--image=gcr.io/cloudylabs-public/kadvice:0.1.12 \
+		--region=us-central1
 ```
 
-## Data Source
+The command will return the Cloud Run provided URL. Let's capture it in an envirnemnt variable
 
-Validating webhook
+```shell
+SERVICE_URL=$(gcloud beta run services describe kadvice --format='value(domain)')
+echo $SERVICE_URL
+```
 
+Now that we have our Cloud Run service deployed, we can configure the Knative webhook which will send events to the above deployed service. To do that we will use Kubernetes validating webhook.
 
 ```shell
 cat <<EOF | kubectl apply -f -
@@ -53,113 +52,62 @@ webhooks:
 EOF
 ```
 
-To illustrate stream processing and some analytics in BigQuery we will use synthetic and pre-processed data output from the [preprocessd](https://github.com/mchmarny/preprocessd) example. The PubSub payload of that data looks like this:
+The `kadvice` webhook will send all pod-level events to our service.
 
-```json
-{
-    EventID: 7f198e39-8ac5-11e9-80fa-42010a8e00b4,
-    Project: cloudylabs
-    Cluster: cr
-    EventTime: 2019-06-09 14:47:25.744039537 +0000 UTC
-    Namespace: demo
-    Name: klogo-kfmq5-deployment-7656dc7769-bf9zh
-    Service: klogo
-    Revision: klogo-kfmq5
-    Configuration: klogo
-    Operation: CREATE
-    ObjectID: 7f196748-8ac5-11e9-80fa-42010a8e00b4
-    ObjectKind: Pod
-    ObjectCreationTime: 2019-06-09 14:47:25 +0000 UTC
-    Content:[...]
-}
-```
-
-Unless you changed the default target topic when configuring [preprocessd](https://github.com/mchmarny/preprocessd), the resulting data will be published to `processedevents`.
-
-## Data Processing
-
-## Configuration
-
-Throughout this example we are going to be using your Google Cloud `project ID` and `project number` constructs. This are unique to your GCP configuration so let's start by capturing these values so we can re-use them throughout this example:
+Next we are going to create the BigQuery dataset and table.
 
 ```shell
-PRJ=$(gcloud config get-value project)
-PRJ_NUM=$(gcloud projects list --filter="${PRJ}" --format="value(PROJECT_NUMBER)")
+	bq mk kadvice
+	bq query --use_legacy_sql=false "
+	CREATE OR REPLACE TABLE kadvice.raw_events (
+		event_id STRING NOT NULL,
+		project STRING NOT NULL,
+		cluster STRING NOT NULL,
+		event_time TIMESTAMP NOT NULL,
+		namespace STRING,
+		name STRING,
+		service STRING,
+		revision STRING,
+		configuration STRING,
+		operation STRING,
+		object_id STRING,
+		object_kind STRING,
+		object_creation_time TIMESTAMP,
+		content BYTES
+	)"
 ```
 
-We will also need to enable a few GCP APIs:
+> Notice the `content` field, that will persist the original message sent in Kubernetes event so we can reprocess that data, if needed, in the future.
+
+Once the table is created, we can create Cloud Dataflow job to drain topic to BigQuery.
+
 
 ```shell
-gcloud services enable dataflow.googleapis.com
-gcloud services enable compute.googleapis.com
-gcloud services enable stackdriver.googleapis.com
-gcloud services enable logging.googleapis.com
-gcloud services enable bigquerystorage.googleapis.com
-gcloud services enable storage-api.googleapis.com
-gcloud services enable bigquery-json.googleapis.com
-gcloud services enable bigquerystorage.googleapis.com
-gcloud services enable pubsub.googleapis.com
-gcloud services enable cloudresourcemanager.googleapis.com
+PROJECT=$(gcloud config get-value project)
+gcloud dataflow jobs run kadvice-topic-bq \
+    	--gcs-location gs://dataflow-templates/latest/PubSub_to_BigQuery \
+    	--parameters "inputTopic=projects/${PROJECT}/topics/kadvice,outputTableSpec=${PROJECT}:kadvice.raw_events"
+
 ```
 
-### Stream Data into BigQuery
+Cloud Dataflow will take a couple of minutes to create the necessary resources. When done, you will see data in the `kadvice.raw_events` table in BigQuery.
 
-Next we are going to stream the PubSub topic data into BigQuery table. First, create the table using following schema:
+### Knative Metrics (#2)
+
+Similarly, to export GKE pod metric to BigQuery we will use the [kexport](https://github.com/mchmarny/kexport) service. This is a single container so we can deploy it with a single command to all the clusters we want to track.
+
 
 ```shell
-bq mk streams
-bq query --use_legacy_sql=false "
-  CREATE OR REPLACE TABLE streams.payload_raw (
-    source_id STRING NOT NULL,
-    event_id STRING NOT NULL,
-    event_ts TIMESTAMP NOT NULL,
-    label STRING NOT NULL,
-    mem_used FLOAT64 NOT NULL,
-    cpu_used FLOAT64 NOT NULL,
-    load_1 FLOAT64 NOT NULL,
-    load_5 FLOAT64 NOT NULL,
-    load_15 FLOAT64 NOT NULL,
-    random_metric FLOAT64 NOT NULL,
-    mem_load_bucket STRING NOT NULL,
-    cpu_load_bucket STRING NOT NULL,
-    util_bias STRING NOT NULL,
-    load_trend INT64 NOT NULL,
-    combined_util FLOAT64 NOT NULL
-)"
+PROJECT=$(gcloud config get-value project)
+kubectl run kexport --env="INTERVAL=30s" \
+	--replicas=1 --generator=run-pod/v1 \
+	--image="gcr.io/cloudylabs-public/kexport:0.3.3"
 ```
 
-Once the table is created, we can create Cloud Dataflow job to drain topic to BigQuery
-
-```shell
-gcloud dataflow jobs run processedevents-topic-to-bq \
-    --gcs-location gs://dataflow-templates/latest/PubSub_to_BigQuery \
-    --parameters \
-inputTopic=projects/$PRJ/topics/processedevents,\
-outputTableSpec=$PRJ:streams.payload_raw
-```
 
 ## Data Analysis
 
-
-Extract single value from JSON
-
-```sql
-SELECT JSON_EXTRACT(SAFE_CONVERT_BYTES_TO_STRING(content), "$.request['operation']")
-FROM `cloudylabs.kadvice.raw_events`
-```
-
-Print out the entire payload
-
-```sql
-SELECT TO_JSON_STRING(SAFE_CONVERT_BYTES_TO_STRING(content), true)
-FROM `cloudylabs.kadvice.raw_events`
-```
-
-
-
-
-
-
+Let's start by combining the two main Knative service-level events. When the revision is `created` and `deleted`. This will allow us to see the lifespan of the pod in seconds.
 
 ```
 SELECT
@@ -198,10 +146,9 @@ FROM (
 ORDER BY 1 desc
 ```
 
-> Before you can save the above query as `pods` view you will have to fully qualify the table. For example `kadvice.raw_events` will become `PROJECT_ID.kadvice.raw_events`
+> Before you can save the above query as a view you will have to fully qualify the table. For example `kadvice.raw_events` will become `PROJECT_ID.kadvice.raw_events`
 
-
-You can then combine this data with the pod metrics from `kexport`
+We can also combine the pod event data with it's runtime metrics which will give us the reserved vs used CPU and RAM metrics.
 
 ```sql
 select
@@ -245,4 +192,24 @@ Results in
 | cloudylabs 	| cr 	| demo 	| kdemo 	| kdemo-x6rfc-deployment-8fc5bfb9f-s7gjb 	| 2019-06-11 13:14:00.507299 UTC 	| 2019-06-11 13:17:04.10136 UTC 	| 183 	| 0 	| 25 	| 13595306.67 	| 4.5 	|
 | cloudylabs 	| cr 	| demo 	| kdemo 	| kdemo-x6rfc-deployment-8fc5bfb9f-lfw5s 	| 2019-06-11 14:14:00.291517 UTC 	| 2019-06-11 14:15:56.382867 UTC 	| 116 	| 0 	| 25 	| 12356608 	| 4 	|
 ```
+
+Finally, to pick up into the raw JSON of the original event, you can use the BigQuery build in functions. To extract single value:
+
+```sql
+SELECT JSON_EXTRACT(SAFE_CONVERT_BYTES_TO_STRING(content), "$.request['operation']")
+FROM `cloudylabs.kadvice.raw_events`
+```
+
+And to print the entire message as string:
+
+```sql
+SELECT TO_JSON_STRING(SAFE_CONVERT_BYTES_TO_STRING(content), true)
+FROM `cloudylabs.kadvice.raw_events`
+```
+
+## Recommendation
+
+// TODO:
+
+
 
