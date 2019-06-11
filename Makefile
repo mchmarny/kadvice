@@ -52,3 +52,8 @@ job:
 	gcloud dataflow jobs run kadvice-topic-bq \
     	--gcs-location gs://dataflow-templates/latest/PubSub_to_BigQuery \
     	--parameters "inputTopic=projects/${PROJECT}/topics/kadvice,outputTableSpec=${PROJECT}:kadvice.raw_events"
+
+catalog:
+	gcloud beta data-catalog entries update \
+		--lookup-entry "pubsub.topic.${PROJECT}.kadvice" \
+		--schema-from-file "schema.yaml"

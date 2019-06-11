@@ -1,0 +1,59 @@
+- column: event_timestamp
+  description: Pub/Sub event timestamp
+  mode: REQUIRED
+  type: TIMESTAMP
+- column: attributes
+  description: Pub/Sub message attributes
+  mode: NULLABLE
+  type: MAP<STRING,STRING>
+- column: payload
+  description: Pub/Sub message payload
+  mode: NULLABLE
+  type: STRUCT
+  subcolumns:
+    - column: event_id
+      description: Webhook POST ID
+      mode: REQUIRED
+      type: STRING
+    - column: project
+      description: GCP Project ID provided in the POST
+      mode: REQUIRED
+      type: STRING
+    - column: cluster
+      description: GKE Cluster name provided in the POST
+      mode: REQUIRED
+      type: STRING
+    - column: event_time
+      description: Event timestamp
+      mode: REQUIRED
+      type: TIMESTAMP
+    - column: namespace
+      description: The namespace
+      type: STRING
+    - column: name
+      description: The object name
+      type: STRING
+    - column: service
+      description: The Knative service name
+      type: STRING
+    - column: revision
+      description: The Knative revision name
+      type: STRING
+    - column: configuration
+      description: The Knative configuration name
+      type: STRING
+    - column: operation
+      description: The operation triggering this event
+      type: STRING
+    - column: object_id
+      description: The ID of the object triggering this event
+      type: STRING
+    - column: object_kind
+      description: The kind of the object triggering this event
+      type: STRING
+    - column: object_creation_time
+      description: The creation time of the object triggering this event
+      type: STRING
+    - column: content
+      description: The raw event JSON
+      type: BYTES
