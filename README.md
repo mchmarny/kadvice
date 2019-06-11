@@ -15,8 +15,8 @@ The whole idea of using Knative service to monitor other Knative services brough
 
 ```shell
 gcloud beta run deploy kadvice \
-		--image=gcr.io/cloudylabs-public/kadvice:0.1.12 \
-		--region=us-central1
+  --image=gcr.io/cloudylabs-public/kadvice:0.1.12 \
+	--region=us-central1
 ```
 
 The command will return the Cloud Run provided URL. Let's capture it in an envirnemnt variable
@@ -57,24 +57,24 @@ The `kadvice` webhook will send all pod-level events to our service.
 Next we are going to create the BigQuery dataset and table.
 
 ```shell
-	bq mk kadvice
-	bq query --use_legacy_sql=false "
-	CREATE OR REPLACE TABLE kadvice.raw_events (
-		event_id STRING NOT NULL,
-		project STRING NOT NULL,
-		cluster STRING NOT NULL,
-		event_time TIMESTAMP NOT NULL,
-		namespace STRING,
-		name STRING,
-		service STRING,
-		revision STRING,
-		configuration STRING,
-		operation STRING,
-		object_id STRING,
-		object_kind STRING,
-		object_creation_time TIMESTAMP,
-		content BYTES
-	)"
+bq mk kadvice
+bq query --use_legacy_sql=false "
+CREATE OR REPLACE TABLE kadvice.raw_events (
+  event_id STRING NOT NULL,
+  project STRING NOT NULL,
+  cluster STRING NOT NULL,
+  event_time TIMESTAMP NOT NULL,
+  namespace STRING,
+  name STRING,
+  service STRING,
+  revision STRING,
+  configuration STRING,
+  operation STRING,
+  object_id STRING,
+  object_kind STRING,
+  object_creation_time TIMESTAMP,
+  content BYTES
+)"
 ```
 
 > Notice the `content` field, that will persist the original message sent in Kubernetes event so we can reprocess that data, if needed, in the future.
@@ -85,8 +85,8 @@ Once the table is created, we can create Cloud Dataflow job to drain topic to Bi
 ```shell
 PROJECT=$(gcloud config get-value project)
 gcloud dataflow jobs run kadvice-topic-bq \
-    	--gcs-location gs://dataflow-templates/latest/PubSub_to_BigQuery \
-    	--parameters "inputTopic=projects/${PROJECT}/topics/kadvice,outputTableSpec=${PROJECT}:kadvice.raw_events"
+  --gcs-location gs://dataflow-templates/latest/PubSub_to_BigQuery \
+  --parameters "inputTopic=projects/${PROJECT}/topics/kadvice,outputTableSpec=${PROJECT}:kadvice.raw_events"
 
 ```
 
@@ -109,17 +109,17 @@ kubectl run kexport --env="INTERVAL=30s" \
 
 Let's start by combining the two main Knative service-level events. When the revision is `created` and `deleted`. This will allow us to see the lifespan of the pod in seconds.
 
-```
+```sql
 SELECT
-    cp.creation_time,
-    dp.deletion_time,
-    TIMESTAMP_DIFF(dp.deletion_time, cp.creation_time, SECOND) as life_time,
-    cp.project,
-    cp.cluster,
-    cp.namespace,
-    cp.service,
-    cp.pod_name,
-    cp.revision
+  cp.creation_time,
+  dp.deletion_time,
+  TIMESTAMP_DIFF(dp.deletion_time, cp.creation_time, SECOND) as life_time,
+  cp.project,
+  cp.cluster,
+  cp.namespace,
+  cp.service,
+  cp.pod_name,
+  cp.revision
 FROM (
   SELECT
     e.event_time as creation_time,
@@ -151,7 +151,7 @@ ORDER BY 1 desc
 We can also combine the pod event data with it's runtime metrics which will give us the reserved vs used CPU and RAM metrics.
 
 ```sql
-select
+SELECT
   p.project,
   p.cluster,
   p.namespace,
@@ -164,10 +164,10 @@ select
   ROUND(MAX(m.reserved_cpu),2) as max_reserved_cpu,
   ROUND(AVG(m.used_ram),2) as avg_used_ram,
   ROUND(AVG(m.used_cpu),2) as avg_used_cpu
-from kadvice.pods p
-inner join kadvice.metrics m on p.pod_name = m.pod
-  and m.metric_time between p.creation_time and p.deletion_time
-group by
+FROM kadvice.pods p
+INNER JOIN kadvice.metrics m ON p.pod_name = m.pod
+  AND m.metric_time between p.creation_time AND p.deletion_time
+GROUP BY
   p.project,
   p.cluster,
   p.namespace,
@@ -180,7 +180,6 @@ group by
 
 Results in
 
-```shell
 | project 	| cluster 	| namespace 	| service 	| pod_name 	| creation_time 	| deletion_time 	| life_time 	| max_reserved_ram 	| max_reserved_cpu 	| avg_used_ram 	| avg_used_cpu 	|
 |------------	|---------	|-----------	|----------	|--------------------------------------------	|--------------------------------	|--------------------------------	|-----------	|------------------	|------------------	|--------------	|--------------	|
 | cloudylabs 	| cr 	| demo 	| kdemo 	| kdemo-x6rfc-deployment-8fc5bfb9f-drrmc 	| 2019-06-11 15:56:00.733781 UTC 	| 2019-06-11 15:58:57.301936 UTC 	| 176 	| 0 	| 25 	| 13337258.67 	| 4.33 	|
@@ -191,20 +190,19 @@ Results in
 | cloudylabs 	| cr 	| demo 	| kdemo 	| kdemo-x6rfc-deployment-8fc5bfb9f-xjqnl 	| 2019-06-11 15:28:01.041772 UTC 	| 2019-06-11 15:30:09.19335 UTC 	| 128 	| 0 	| 25 	| 11587584 	| 3.75 	|
 | cloudylabs 	| cr 	| demo 	| kdemo 	| kdemo-x6rfc-deployment-8fc5bfb9f-s7gjb 	| 2019-06-11 13:14:00.507299 UTC 	| 2019-06-11 13:17:04.10136 UTC 	| 183 	| 0 	| 25 	| 13595306.67 	| 4.5 	|
 | cloudylabs 	| cr 	| demo 	| kdemo 	| kdemo-x6rfc-deployment-8fc5bfb9f-lfw5s 	| 2019-06-11 14:14:00.291517 UTC 	| 2019-06-11 14:15:56.382867 UTC 	| 116 	| 0 	| 25 	| 12356608 	| 4 	|
-```
 
 Finally, to pick up into the raw JSON of the original event, you can use the BigQuery build in functions. To extract single value:
 
 ```sql
 SELECT JSON_EXTRACT(SAFE_CONVERT_BYTES_TO_STRING(content), "$.request['operation']")
-FROM `cloudylabs.kadvice.raw_events`
+FROM `kadvice.raw_events`
 ```
 
 And to print the entire message as string:
 
 ```sql
 SELECT TO_JSON_STRING(SAFE_CONVERT_BYTES_TO_STRING(content), true)
-FROM `cloudylabs.kadvice.raw_events`
+FROM `kadvice.raw_events`
 ```
 
 ## Recommendation
