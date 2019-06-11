@@ -211,7 +211,102 @@ FROM `kadvice.raw_events`
 
 ## Recommendation
 
-// TODO:
+First, let's linear regression model which we will use to predict the run duration of a service. To do that, first, create a model:
 
+```sql
+#standardSQL
+CREATE MODEL kadvice.metric_predict
+OPTIONS(model_type='linear_reg') AS
+  SELECT
+    p.life_time as label,
+    p.service,
+    case
+      when p.life_time < 60 then 'short'
+      when p.life_time > 60 and p.life_time < 300 then 'medium'
+      else 'long'
+    end as life_duration,
+    m.reserved_ram,
+    case when m.reserved_ram = 0 then 0 else 1 end as has_reserved_ram,
+    case when m.used_ram > m.reserved_ram then 1 else 0 end as exceeded_reserved_ram,
+    m.used_cpu,
+    case when m.reserved_cpu = 0 then 0 else 1 end as has_reserved_cpu,
+    case when m.used_cpu > m.reserved_cpu then 1 else 0 end as exceeded_reserved_cpu,
+    FORMAT_TIMESTAMP("%F-%H-%M", p.creation_time) metric_minute
+  FROM kadvice.pods p
+  INNER JOIN kadvice.metrics m ON p.pod_name = m.pod
+    AND m.metric_time between p.creation_time AND p.deletion_time
+  ORDER BY metric_minute
+```
 
+> On large datasets you may want to build model on subset of data
+
+Now, let's evaluate the created model
+
+```sql
+#standardSQL
+SELECT
+  *
+FROM
+  ML.EVALUATE(MODEL kadvice.metric_predict, (
+      SELECT
+        p.life_time as label,
+        p.service,
+        case
+          when p.life_time < 60 then 'short'
+          when p.life_time > 60 and p.life_time < 300 then 'medium'
+          else 'long'
+        end as life_duration,
+        m.reserved_ram,
+        case when m.reserved_ram = 0 then 0 else 1 end as has_reserved_ram,
+        case when m.used_ram > m.reserved_ram then 1 else 0 end as exceeded_reserved_ram,
+        m.used_cpu,
+        case when m.reserved_cpu = 0 then 0 else 1 end as has_reserved_cpu,
+        case when m.used_cpu > m.reserved_cpu then 1 else 0 end as exceeded_reserved_cpu,
+        FORMAT_TIMESTAMP("%F-%H-%M", p.creation_time) metric_minute
+      FROM kadvice.pods p
+      INNER JOIN kadvice.metrics m ON p.pod_name = m.pod
+        AND m.metric_time between p.creation_time AND p.deletion_time
+      ORDER BY metric_minute
+))
+```
+
+The result of that model evaluation query is a single row
+
+| Row | mean_absolute_error | mean_squared_error | mean_squared_log_error | median_absolute_error | r2_score          | explained_variance |     |
+| --- | ------------------- | ------------------ | ---------------------- | --------------------- | ----------------- | ------------------ | --- |
+| 1   | 3.194159202241952   | 164.4564632100856  | 0.007378655314058872   | 0.09496934542528379   | 0.743104505393656 | 0.7580205308047168 |
+
+> The value we want to pay attention to is the `r2_score` which will tell us how much of the data can be explained by the model. `1` is all, `0` is none. That number can actually get below `0` but that's a whole different topic
+
+Finally, we can run a prediction query
+
+```sql
+#standardSQL
+SELECT
+  service,
+  SUM(predicted_label-label) as delta_seconds FROM ML.PREDICT(MODEL kadvice.metric_predict, (
+SELECT
+    p.life_time as label,
+    p.service,
+    case
+      when p.life_time < 60 then 'short'
+      when p.life_time > 60 and p.life_time < 300 then 'medium'
+      else 'long'
+    end as life_duration,
+    m.reserved_ram,
+    case when m.reserved_ram = 0 then 0 else 1 end as has_reserved_ram,
+    case when m.used_ram > m.reserved_ram then 1 else 0 end as exceeded_reserved_ram,
+    m.used_cpu,
+    case when m.reserved_cpu = 0 then 0 else 1 end as has_reserved_cpu,
+    case when m.used_cpu > m.reserved_cpu then 1 else 0 end as exceeded_reserved_cpu,
+    FORMAT_TIMESTAMP("%F-%H-%M", p.creation_time) metric_minute
+  FROM kadvice.pods p
+  INNER JOIN kadvice.metrics m ON p.pod_name = m.pod
+    AND m.metric_time between p.creation_time AND p.deletion_time
+))
+GROUP BY service
+ORDER BY delta_seconds DESC
+```
+
+This will return the delta between the predicted pod runtime vs the actual.
 
