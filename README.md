@@ -1,10 +1,12 @@
 # kadvice
 
-Knative cluster events and metric streaming using Cloud Run, Cloud PubSub, Cloud Dataflow, and BigQuery ML. It comprises of two data flows:
+Kubernetes cluster events and metric streaming using Cloud Run, Cloud PubSub, Cloud Dataflow, and BigQuery ML. The tech in this demo is pretty generic but for purposes of illustrating actionable recommendation I'm going to use [Knative](https://knative.dev)-managed workloads.
+
+To get data to build this recommendation engine, we will create two flows:
 
 ### Events
 
-Kubernetes validating webhook that sends pod events to Cloud Run-based preprocessing service. That service extracts portent elements and publishes processed event data to a Cloud PubSub topic. Finally, a Cloud Dataflow job drains the data on the topic into a BigQuery table.
+This will use Kubernetes validating webhook to sends cluster events to Cloud Run-based preprocessing service. That service extracts portent elements and publishes processed event data to a Cloud PubSub topic. Finally, a Cloud Dataflow job drains the data on the topic into a BigQuery table.
 
 ### Metrics
 
@@ -21,7 +23,7 @@ The whole idea of using Knative service to monitor other Knative services brough
 ```shell
 gcloud beta run deploy kadvice \
   --image=gcr.io/cloudylabs-public/kadvice:0.1.12 \
-	--region=us-central1
+  --region=us-central1
 ```
 
 The command will return the Cloud Run provided URL. Let's capture it in an envirnemnt variable
