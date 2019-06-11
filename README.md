@@ -108,6 +108,21 @@ kubectl run kexport --env="INTERVAL=30s" \
 	--image="gcr.io/cloudylabs-public/kexport:0.3.3"
 ```
 
+The resulting BigQuery schema will look like this
+
+| Field name     | Type      | Mode     |
+| -------------- | --------- | -------- |
+| metric_time    | TIMESTAMP | REQUIRED |
+| project        | STRING    | REQUIRED |
+| cluster        | STRING    | REQUIRED |
+| namespace      | STRING    | REQUIRED |
+| serviceaccount | STRING    | REQUIRED |
+| pod            | STRING    | REQUIRED |
+| reserved_cpu   | INTEGER   | REQUIRED |
+| reserved_ram   | INTEGER   | REQUIRED |
+| used_cpu       | INTEGER   | REQUIRED |
+| used_ram       | INTEGER   | REQUIRED |
+
 
 ## Data Analysis
 
