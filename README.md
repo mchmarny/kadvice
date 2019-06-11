@@ -287,8 +287,10 @@ Finally, we can run a prediction query
 #standardSQL
 SELECT
   service,
-  ABS(predicted_label-label) as delta_seconds FROM ML.PREDICT(MODEL kadvice.metric_predict, (
-SELECT
+  ROUND(MIN(predicted_label-label),2) as runtime_sec_predict_low,
+  ROUND(MAX(predicted_label-label),2) as runtime_sec_predict_high
+FROM ML.PREDICT(MODEL kadvice.metric_predict, (
+  SELECT
     p.life_time as label,
     p.service,
     case
@@ -307,19 +309,24 @@ SELECT
   INNER JOIN kadvice.metrics m ON p.pod_name = m.pod
     AND m.metric_time between p.creation_time AND p.deletion_time
 ))
-GROUP BY service
-ORDER BY delta_seconds DESC
+GROUP BY
+  service
+ORDER BY service
 ```
 
 This will return the delta between the predicted pod runtime vs the actual.
 
-| row | service  | delta_seconds         |
-| --- | -------- | --------------------- |
-| 1   | kuser    | 0.002167282571093665  |
-| 2   | klogo    | -0.018206926593990147 |
-| 3   | maxprime | -0.07242691897610598  |
-| 4   | kdemo    | -887.4131469679465    |
+| row | service  | delta_seconds |
+| --- | -------- | ------------: |
+| 1   | kuser    |          0.01 |
+| 2   | klogo    |         -0.01 |
+| 3   | maxprime |         -0.07 |
+| 4   | kdemo    |          3.41 |
 
+
+## Conclusion
+
+Hopefully this demo illustrated how you can use combination of event data and runtime metrics to drive recommendation for default auto scaling settings. The service in this demo were all deployed as small images of `go` applications with fast startups and low memory requirements. In case of a larger app, maybe based on legacy framework with a longer startup time, this kind of run time recommendation may go a long way to preventing app constantly spinning up and down where large number of users are exposed to what's known as "cold start" penalty.
 
 ## Disclaimer
 
