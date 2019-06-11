@@ -108,7 +108,7 @@ kubectl run kexport --env="INTERVAL=30s" \
 	--image="gcr.io/cloudylabs-public/kexport:0.3.3"
 ```
 
-The resulting BigQuery schema will look like this
+The resulting BigQuery table schema (`metrics`) will look like this:
 
 | Field name     | Type      | Mode     |
 | -------------- | --------- | -------- |
