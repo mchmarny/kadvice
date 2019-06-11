@@ -310,3 +310,14 @@ ORDER BY delta_seconds DESC
 
 This will return the delta between the predicted pod runtime vs the actual.
 
+| row | service  | delta_seconds         |
+| --- | -------- | --------------------- |
+| 1   | kuser    | 0.002167282571093665  |
+| 2   | klogo    | -0.018206926593990147 |
+| 3   | maxprime | -0.07242691897610598  |
+| 4   | kdemo    | -887.4131469679465    |
+
+
+## Disclaimer
+
+This is my personal project and it does not represent my employer. I take no responsibility for issues caused by this code. I do my best to ensure that everything works, but if something goes wrong, my apologies is all you will get.
