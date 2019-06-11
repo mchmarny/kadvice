@@ -2,11 +2,11 @@
 
 Knative cluster events and metric streaming using Cloud Run, Cloud PubSub, Cloud Dataflow, and BigQuery ML. It comprises of two data flows:
 
-## Events
+### Events
 
 Kubernetes validating webhook that sends pod events to Cloud Run-based preprocessing service. That service extracts portent elements and publishes processed event data to a Cloud PubSub topic. Finally, a Cloud Dataflow job drains the data on the topic into a BigQuery table.
 
-## Metrics
+### Metrics
 
 Kubernetes-based application (POD) which polls GKE cluster API and extracts extracts runtime metrics (reserved and used CPU as well as reserved and used RAM) and then writes that data into BigQuery table
 
