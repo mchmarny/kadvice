@@ -126,6 +126,22 @@ The resulting BigQuery table schema (`metrics`) will look like this:
 | used_ram       | INTEGER   | REQUIRED |
 
 
+## Workloads
+
+To get events and metrics from your cluster you will need some workloads. Ideally you would want to use real-world apps to make the recommendation meaningful. If you need something quick though, there are 3 sample applications in the `sample/deployment` directory. You can deploy all of them with a single command
+
+```shell
+kubectl apply -f sample/deployment -n demo
+```
+
+That will return
+
+```shell
+service.serving.knative.dev "csharpsm" created
+service.serving.knative.dev "gosm" created
+service.serving.knative.dev "javame" created
+```
+
 ## Data Analysis
 
 Let's start by combining the two main Knative service-level events. When the revision is `created` and `deleted`. This will allow us to see the lifespan of the pod in seconds.
@@ -228,18 +244,21 @@ FROM `kadvice.raw_events`
 
 ## Recommendation
 
-First, let's linear regression model which we will use to predict the run duration of a service. To do that, first, create a model:
+First, let's create a linear regression model which we will use to predict the future runs duration of a service. To do that, first, create a model using subset of the source data:
 
 ```sql
 #standardSQL
-CREATE MODEL kadvice.metric_predict
-OPTIONS(model_type='linear_reg') AS
+CREATE OR REPLACE MODEL kadvice.metric_predict
+OPTIONS(
+    model_type='linear_reg',
+    input_label_cols=['label']
+) AS
   SELECT
     p.life_time as label,
     p.service,
     case
       when p.life_time < 60 then 'short'
-      when p.life_time > 60 and p.life_time < 300 then 'medium'
+      when p.life_time > 60 and p.life_time < 200 then 'medium'
       else 'long'
     end as life_duration,
     m.reserved_ram,
@@ -248,11 +267,11 @@ OPTIONS(model_type='linear_reg') AS
     m.used_cpu,
     case when m.reserved_cpu = 0 then 0 else 1 end as has_reserved_cpu,
     case when m.used_cpu > m.reserved_cpu then 1 else 0 end as exceeded_reserved_cpu,
-    FORMAT_TIMESTAMP("%F-%H-%M", p.creation_time) metric_minute
+    p.creation_time
   FROM kadvice.pods p
   INNER JOIN kadvice.metrics m ON p.pod_name = m.pod
     AND m.metric_time between p.creation_time AND p.deletion_time
-  ORDER BY metric_minute
+  ORDER BY p.creation_time
 ```
 
 > On large data sets you may want to build model on subset of data
@@ -261,11 +280,8 @@ Now, let's evaluate the created model
 
 ```sql
 #standardSQL
-SELECT
-  service,
-  MIN(predicted_label-label) as runtime_sec_predict_low,
-  MAX(predicted_label-label) as runtime_sec_predict_high
-FROM ML.PREDICT(MODEL kadvice.metric_predict, (
+SELECT *
+FROM ML.EVALUATE(MODEL kadvice.metric_predict, (
   SELECT
     p.life_time as label,
     p.service,
@@ -280,14 +296,11 @@ FROM ML.PREDICT(MODEL kadvice.metric_predict, (
     m.used_cpu,
     case when m.reserved_cpu = 0 then 0 else 1 end as has_reserved_cpu,
     case when m.used_cpu > m.reserved_cpu then 1 else 0 end as exceeded_reserved_cpu,
-    FORMAT_TIMESTAMP("%F-%H-%M", p.creation_time) metric_minute
+    p.creation_time
   FROM kadvice.pods p
   INNER JOIN kadvice.metrics m ON p.pod_name = m.pod
     AND m.metric_time between p.creation_time AND p.deletion_time
 ))
-GROUP BY
-  service
-ORDER BY service
 ```
 
 The result of that model evaluation query is a single row
@@ -321,7 +334,7 @@ FROM ML.PREDICT(MODEL kadvice.metric_predict, (
     m.used_cpu,
     case when m.reserved_cpu = 0 then 0 else 1 end as has_reserved_cpu,
     case when m.used_cpu > m.reserved_cpu then 1 else 0 end as exceeded_reserved_cpu,
-    FORMAT_TIMESTAMP("%F-%H-%M", p.creation_time) metric_minute
+    p.creation_time
   FROM kadvice.pods p
   INNER JOIN kadvice.metrics m ON p.pod_name = m.pod
     AND m.metric_time between p.creation_time AND p.deletion_time
@@ -333,12 +346,12 @@ ORDER BY service
 
 This will return the delta between the predicted pod runtime vs the actual.
 
-| row | service  | delta_seconds |
-| --- | -------- | ------------: |
-| 1   | kuser    |          0.01 |
-| 2   | klogo    |         -0.01 |
-| 3   | maxprime |         -0.07 |
-| 4   | kdemo    |          3.41 |
+| row | service  | runtime_sec_predict |
+| --- | -------- | ------------------: |
+| 1   | javame   |                2.01 |
+| 2   | klogo    |               -0.01 |
+| 3   | maxprime |               -0.07 |
+| 4   | kdemo    |                3.41 |
 
 
 ## Conclusion
