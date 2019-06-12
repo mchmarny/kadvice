@@ -223,10 +223,6 @@ Results in
 | cloudylabs 	| cr 	| demo 	| kuser 	| kuser-klzg6-deployment-6f9dcf64b7-sfbhw 	| 2019-06-11 14:59:36.697574 UTC 	| 2019-06-11 15:01:42.6629 UTC 	| 125 	| 0 	| 25 	| 16313344 	| 5 	|
 | cloudylabs 	| cr 	| demo 	| kdemo 	| kdemo-x6rfc-deployment-8fc5bfb9f-zxczf 	| 2019-06-11 15:14:00.548681 UTC 	| 2019-06-11 15:17:04.490807 UTC 	| 183 	| 0 	| 25 	| 14891690.67 	| 4.5 	|
 | cloudylabs 	| cr 	| demo 	| kdemo 	| kdemo-x6rfc-deployment-8fc5bfb9f-k2grd 	| 2019-06-11 16:14:01.234284 UTC 	| 2019-06-11 16:15:58.795991 UTC 	| 117 	| 0 	| 25 	| 12593152 	| 3.75 	|
-| cloudylabs 	| cr 	| demo 	| maxprime 	| maxprime-nwgnk-deployment-7567cd9ccc-9z9d9 	| 2019-06-11 14:59:22.920464 UTC 	| 2019-06-11 15:01:53.127756 UTC 	| 150 	| 0 	| 25 	| 14295040 	| 3.8 	|
-| cloudylabs 	| cr 	| demo 	| kdemo 	| kdemo-x6rfc-deployment-8fc5bfb9f-xjqnl 	| 2019-06-11 15:28:01.041772 UTC 	| 2019-06-11 15:30:09.19335 UTC 	| 128 	| 0 	| 25 	| 11587584 	| 3.75 	|
-| cloudylabs 	| cr 	| demo 	| kdemo 	| kdemo-x6rfc-deployment-8fc5bfb9f-s7gjb 	| 2019-06-11 13:14:00.507299 UTC 	| 2019-06-11 13:17:04.10136 UTC 	| 183 	| 0 	| 25 	| 13595306.67 	| 4.5 	|
-| cloudylabs 	| cr 	| demo 	| kdemo 	| kdemo-x6rfc-deployment-8fc5bfb9f-lfw5s 	| 2019-06-11 14:14:00.291517 UTC 	| 2019-06-11 14:15:56.382867 UTC 	| 116 	| 0 	| 25 	| 12356608 	| 4 	|
 
 Finally, to pick up into the raw JSON of the original event, you can use the BigQuery build in functions. To extract single value:
 
