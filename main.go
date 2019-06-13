@@ -29,8 +29,8 @@ var (
 func main() {
 
 	// config
-	parseProject()
-	configQueue(context.Background(), project, topic)
+	project = ensureProject()
+	que = getQueue(context.Background(), project, topic)
 
 	// server
 	addr := fmt.Sprintf(":%s", port)
@@ -56,9 +56,9 @@ func setupRouter() *gin.Engine {
 
 }
 
-func parseProject() {
+func ensureProject() string {
 	if project != notSetValue {
-		return
+		return project
 	}
 
 	mc := meta.NewClient(&http.Client{Transport: userAgentTransport{
@@ -69,7 +69,7 @@ func parseProject() {
 	if err != nil {
 		logger.Fatalf("Error creating metadata client: %v", err)
 	}
-	project = p
+	return p
 }
 
 func mustEnvVar(key, fallbackValue string) string {

@@ -12,8 +12,8 @@ type queue struct {
 	topic  *pubsub.Topic
 }
 
-// configQueue is invoked once per Storable life cycle to configure the store
-func configQueue(ctx context.Context, projectID, topicName string) {
+// getQueue is invoked once per Storable life cycle to configure the store
+func getQueue(ctx context.Context, projectID, topicName string) *queue {
 
 	if projectID == "" {
 		logger.Fatal("projectID not set")
@@ -46,7 +46,7 @@ func configQueue(ctx context.Context, projectID, topicName string) {
 		}
 	}
 
-	que = &queue{
+	return &queue{
 		client: c,
 		topic:  t,
 	}
