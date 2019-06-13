@@ -1,5 +1,4 @@
 RELEASE=0.1.12
-PROJECT=$(gcloud config get-value project)
 
 .PHONY: clean
 

@@ -13,8 +13,8 @@ import (
 
 func testHandler(t *testing.T, f *os.File) {
 
-	parseProject()
-	configQueue(context.Background(), project, topic)
+	project = ensureProject()
+	que = getQueue(context.Background(), project, topic)
 
 	r := setupRouter()
 	req, _ := http.NewRequest("POST", "/test-project/test-cluster", bufio.NewReader(f))
